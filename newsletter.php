@@ -16,13 +16,13 @@ $res = pg_query($db, $query);
 $mail = new PHPMailer(true);
 
 try {
-    // Server settings
+    // Impostazione Server
     $mail->SMTPDebug = SMTP::DEBUG_SERVER;
     $mail->isSMTP();
     $mail->Host = 'smtp.gmail.com';
     $mail->SMTPAuth = true;
     $mail->Username = 'theaitimesit@gmail.com';
-    $mail->Password = "viavozthcudwcaem";
+    $mail->Password = "";
     $mail->SMTPSecure = 'ssl';
     $mail->Port = 465;
 

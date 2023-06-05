@@ -4,8 +4,6 @@
   dai messaggi di log stampati in tempo reale sulla console della pagina.
   
   L'esecuzione dello script richiede l'inserimento di una API key valida (fornita da OpenAI).
-  
-  +++ API Key per testing: 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 +++
 */
 
 $(document).ready(function () {

@@ -43,7 +43,7 @@ let allNews;
 
 let weatherData = "";
 
-async function fetchAllNews() {
+async function fetchAllNews() {       // Verifica la presenza di nuove news nel DB
   allNews = [];
   const client = new Client(pgConfig);
   try {
@@ -62,7 +62,7 @@ async function fetchAllNews() {
   }
 }
 
-async function saveUserToDB(email, firstName, lastName, hashedPassword, newsletter) {
+async function saveUserToDB(email, firstName, lastName, hashedPassword, newsletter) {   //Inserimento nuovi utenti nel DB
   const client = new Client(pgConfig);
   try {
     console.log("\n[saveUserToDB] Connecting to the database...");
@@ -80,7 +80,7 @@ async function saveUserToDB(email, firstName, lastName, hashedPassword, newslett
   }
 }
 
-async function isUserInDB(email) {
+async function isUserInDB(email) {  //Controlla la presenza dell'utente nel database
   const client = new Client(pgConfig);
   try {
     console.log("\n[isUserInDB] Connecting...");
@@ -127,8 +127,6 @@ async function getWeather(lat, lon) {
 }
 
 fetchAllNews();
-
-// SECTION: Routes
 
 // Serve JavaScript file
 app.get("/newsApp.js", (req, res) => {
@@ -342,6 +340,8 @@ app.post("/checkvote", async (req, res) => {
   }
 });
 
+
+//Invia i voti e aggiorna il database con i punteggi
 app.post("/submitvotes", async (req, res) => {
   const votes = req.body;
   const queryUpdateNews = `UPDATE news SET score = score + $1 WHERE unique_id = $2`;
@@ -377,6 +377,7 @@ app.post("/submitvotes", async (req, res) => {
   }
 });
 
+//Azzera i voti dell'utente, quando vengono generate nuove notizie, e permette agli stessi di rivotare
 app.get("/resetVote", async (req, res) => {
   const query = `UPDATE users SET has_voted_today = false`;
 

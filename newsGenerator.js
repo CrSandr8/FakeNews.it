@@ -54,10 +54,11 @@ async function axiosPostWithExponentialBackoff(url, data, options, maxRetries = 
 }
 
 // GENERATE TITLE
+//La funzione prende il modello e la temperatura selezionati sopra, e gli effettua la richiesta prompt
 async function generateTitle(category) {
   const params = {
     model: model,
-    prompt: "Imagine you are a journalist in a fictional world, . Write a concise title for a " + category + "news: ",
+    prompt: "Imagine you are a journalist in a fictional world, . Write a concise title for a " + category + "news: ", 
     temperature: temperature,
     max_tokens: 30,
   };
@@ -74,6 +75,7 @@ async function generateTitle(category) {
 }
 
 // GENERATE CONTENT
+// Prende in input il titolo generato con la funzione sopra e scrive l'articolo vero e proprio
 async function generateContent(titlePrompt) {
   const contentParams = {
     model: model,
@@ -94,6 +96,7 @@ async function generateContent(titlePrompt) {
 }
 
 // GENERATE IMAGE
+// Genera una immagine con Dall-E usando il titolo
 async function generateImage(titlePrompt) {
   const imageApiUrl = "https://api.openai.com/v1/images/generations";
 
@@ -120,6 +123,7 @@ async function generateImage(titlePrompt) {
 }
 
 // INSERT DATA INTO DB w/ GROUP_ID
+// Inserisce l'articolo nel database 
 
 function generateGroupId() {
   return uuidv4();
@@ -147,6 +151,8 @@ async function insertIntoDB(title, content, category, imageUrl, groupId) {
     await client.end();
   }
 }
+
+// Salva l'url della immagine su un sito di hosting
 async function createUrl(tempUrl) {
   const timestamp = Date.now();
   console.log("\n[createUrl] Uploading image...");
@@ -170,7 +176,7 @@ async function createUrl(tempUrl) {
   return url;
 }
 
-// CALL ALL FUNCTIONS TO GENERATA NEWS DATA AND INSERT INTO DB
+// CALL ALL FUNCTIONS TO GENERATE NEWS DATA AND INSERT INTO DB
 async function generateNewsData(category, groupId) {
   try {
     const title = await generateTitle(category);
