@@ -1,3 +1,17 @@
+/**
+ * Il server è responsabile per la gestione delle richieste HTTP, il routing delle richieste verso i rispettivi endpoint e l'interazione con il database.
+ *
+ * Utilizza il framework Express.js per creare un'applicazione web e configurare le varie funzionalità. Viene utilizzata la libreria pg per la connessione
+ * e l'interazione con il database PostgreSQL. Il server gestisce anche la sessione degli utenti utilizzando il modulo express-session per il controllo dell'autenticazione
+ * e la memorizzazione delle informazioni di sessione.
+ *
+ * Le principali funzionalità sono la gestione delle richieste per l'autenticazione degli utenti, l'ottenimento delle notizie, l'iscrizione alla newsletter,
+ * la generazione delle notizie tramite l'esecuzione dell'apposito script, il controllo dei voti degli utenti e il recupero dei dati meteorologici.
+ *
+ * Serve il file JavaScript necessari per il funzionamento del front-end.
+ */
+
+// Moduli utilizzati
 require("dotenv").config();
 const express = require("express");
 const { Client } = require("pg");
@@ -5,9 +19,9 @@ const session = require("express-session");
 const bcrypt = require("bcrypt");
 const axios = require("axios");
 const { exec } = require("child_process");
+const { error } = require("console");
 
-const app = express();
-
+// Configurazione dati DB tramite variabili di ambiente (file .env memorizzato in locale)
 const pgConfig = {
   user: process.env.PG_USER,
   host: process.env.PG_HOST,
@@ -15,6 +29,9 @@ const pgConfig = {
   password: process.env.PG_PASSWORD,
   port: process.env.PG_PORT,
 };
+
+// Creazione web app Express e configurazione
+const app = express();
 
 app.use(
   express.static("public", {
@@ -36,11 +53,11 @@ app.use(
 
 app.use(express.json());
 
+// Le notizie estrapolate dal DB vengono salvate in array
 let latestNews = [];
 let allNews;
 
-// SECTION: Fuctions
-
+// Dati meteo
 let weatherData = "";
 
 async function fetchAllNews() {       // Verifica la presenza di nuove news nel DB
@@ -62,7 +79,7 @@ async function fetchAllNews() {       // Verifica la presenza di nuove news nel 
   }
 }
 
-async function saveUserToDB(email, firstName, lastName, hashedPassword, newsletter) {   //Inserimento nuovi utenti nel DB
+async function saveUserToDB(email, firstName, lastName, hashedPassword, newsletter) {
   const client = new Client(pgConfig);
   try {
     console.log("\n[saveUserToDB] Connecting to the database...");
@@ -80,7 +97,7 @@ async function saveUserToDB(email, firstName, lastName, hashedPassword, newslett
   }
 }
 
-async function isUserInDB(email) {  //Controlla la presenza dell'utente nel database
+async function isUserInDB(email) {
   const client = new Client(pgConfig);
   try {
     console.log("\n[isUserInDB] Connecting...");
@@ -102,6 +119,7 @@ async function isUserInDB(email) {  //Controlla la presenza dell'utente nel data
   }
 }
 
+// Ottieni dati meteo
 async function getWeather(lat, lon) {
   const apiKey = "1c1c8bb4564fa4482b830ffbe7daed37";
   const url = `https://api.openweathermap.org/data/2.5/weather`;
@@ -126,7 +144,11 @@ async function getWeather(lat, lon) {
   }
 }
 
-fetchAllNews();
+fetchAllNews().catch((error) => {
+  console.error("Error during news fetch:", error);
+});
+
+// SECTION: Routes
 
 // Serve JavaScript file
 app.get("/newsApp.js", (req, res) => {
@@ -165,8 +187,9 @@ app.get("/newsGenerator.js", (req, res) => {
   res.type("application/javascript").sendFile(__dirname + "/newsGenerator.js");
 });
 
-// Endpoints
+// ROUTE DEGLI ENDPOINT
 
+// Elimina un utente dal DB
 app.post("/unsubscribe", async (req, res) => {
   const { email } = req.body;
 
@@ -184,6 +207,7 @@ app.post("/unsubscribe", async (req, res) => {
   }
 });
 
+// Avvia lo script di generazione notizie
 app.post("/newsGenerator", (req, res) => {
   const apiKey = req.body.apiKey;
   console.log("\n[/newsGenerator] Received API key:", apiKey);
@@ -193,7 +217,9 @@ app.post("/newsGenerator", (req, res) => {
       console.error(`[/newsGenerator] Error executing newsGenerator.js: ${error.message}`);
       res.status(500).send("[/newsGenerator] Error executing newsGenerator.js");
     } else {
-      fetchAllNews();
+      fetchAllNews().catch((error) => {
+        res.status(500).send("[/newsGenerator] Error during news fetch:", error);
+      });
       console.log("[/newsGenerator] newsGenerator.js executed!");
     }
   });
@@ -225,6 +251,7 @@ app.post("/newsGenerator", (req, res) => {
   });
 });
 
+// Ritorna alla homepage le ultime notizie e lo stato di login
 app.get("/index", (req, res) => {
   const response = {
     loggedIn: req.session.loggedIn,
@@ -233,14 +260,17 @@ app.get("/index", (req, res) => {
   res.json(response);
 });
 
+// Ritorna tutte le notizie all'archivio
 app.get("/archive", (req, res) => {
   res.json(allNews);
 });
 
+// Ritorna le ultime notizie da votare alla pagina TopNews
 app.get("/topnews", (req, res) => {
   res.json(latestNews);
 });
 
+// Gestione iscrizione nuovo utente
 app.post("/subscribe", async (req, res) => {
   const { email, firstName, lastName, password, newsletter } = req.body;
 
@@ -267,6 +297,7 @@ app.post("/subscribe", async (req, res) => {
   }
 });
 
+// Gestione login utente non esistente
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
@@ -312,6 +343,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
+// Controlla se l'utente ha già votato
 app.post("/checkvote", async (req, res) => {
   const { email } = req.body;
   console.log("\n[/checkvote] email:", email);
@@ -340,8 +372,6 @@ app.post("/checkvote", async (req, res) => {
   }
 });
 
-
-//Invia i voti e aggiorna il database con i punteggi
 app.post("/submitvotes", async (req, res) => {
   const votes = req.body;
   const queryUpdateNews = `UPDATE news SET score = score + $1 WHERE unique_id = $2`;
@@ -377,7 +407,6 @@ app.post("/submitvotes", async (req, res) => {
   }
 });
 
-//Azzera i voti dell'utente, quando vengono generate nuove notizie, e permette agli stessi di rivotare
 app.get("/resetVote", async (req, res) => {
   const query = `UPDATE users SET has_voted_today = false`;
 
@@ -399,41 +428,19 @@ app.get("/resetVote", async (req, res) => {
   }
 });
 
+// Serve index.html come pagina iniziale
 app.get("/", (req, res) => {
   res.sendFile("index.html");
 });
 
+// Ritorna le notizie in ordine di voto decrescente
 app.get("/gettopnews", (req, res) => {
   const sortedNews = allNews.sort((a, b) => b.score - a.score);
   const topNews = sortedNews.slice(0, 5);
   res.json(topNews);
 });
 
-app.post("/newsletter", (req, res) => {
-  const email = req.body.email;
-  console.log("newletter:", email);
-  const client = new Client(pgConfig);
-
-  client
-    .connect()
-    .then(() => {
-      const query = "INSERT INTO newsletter (email) VALUES ($1)";
-      console.log("query");
-      return client.query(query, [email]);
-    })
-    .then(() => {
-      res.json({ success: true });
-    })
-    .catch((error) => {
-      console.error("Error inserting email:", error);
-      res.status(500).json({ error: "Internal server error" });
-    })
-    .finally(() => {
-      // Chiudi la connessione al database
-      client.end();
-    });
-});
-
+// Richiede dati meteo se non presenti
 app.post("/weather", async (req, res) => {
   const { lat, lon } = req.body;
   if (weatherData == "") {
@@ -442,8 +449,7 @@ app.post("/weather", async (req, res) => {
   res.send(weatherData);
 });
 
-// SECTION: Start Listening
-
+// Server listening su porta 51555
 const PORT = 51555;
 
 app.listen(PORT, () => {
