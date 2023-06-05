@@ -21,7 +21,7 @@ $(document).ready(() => {
 
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
+      (position) => {
         const data = {
           lat: position.coords.latitude,
           lon: position.coords.longitude,
